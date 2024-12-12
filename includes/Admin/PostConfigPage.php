@@ -237,7 +237,7 @@ class PostConfigPage
         - Avoid generic sports clichés
         - Use vivid, descriptive language
         - Highlight potential match-defining moments
-        - Create a sense of anticipation and excitement'; // Add default value
+        - Create a sense of anticipation and excitement';
 
         echo '<textarea name="' . self::OPTION_NAME . '[ai_content_prompt]" rows="6" cols="80">' . esc_textarea($value) . '</textarea>';
         echo '<p class="description">Customize the prompt sent to OpenAI for content generation.</p>';
