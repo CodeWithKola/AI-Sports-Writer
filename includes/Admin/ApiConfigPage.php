@@ -203,15 +203,6 @@ class ApiConfigPage
         $regions = $regions['data'] ?? [];
         $table_name = $wpdb->prefix . 'football_regions';
 
-        // Create table if not exists
-        $wpdb->query(
-            "CREATE TABLE IF NOT EXISTS {$table_name} (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                name VARCHAR(255) UNIQUE NOT NULL,
-                leagues TEXT NOT NULL
-            )"
-        );
-
         // Prepare and insert regions
         foreach ($regions as $region) {
             $name = sanitize_text_field($region['name']);
