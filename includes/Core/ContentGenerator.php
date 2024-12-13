@@ -217,7 +217,7 @@ class ContentGenerator
                 $wpdb->update($table_name, ['process_completed_at' => current_time('mysql')], ['id' => $game['id']]);
             } catch (\Throwable $th) {
                 Logger::log("An error occurred during game processing: " . $th->getMessage(), 'error');
-                // Optionally: Set processed status to indicate failure or skipped.
+
                 continue; // Skip to the next game
             }
         }

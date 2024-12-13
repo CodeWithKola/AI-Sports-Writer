@@ -243,30 +243,30 @@ class Plugin
     public function renderMainPage(): void
     {
 ?>
-        <div class="wrap">
-            <h1><?php echo esc_html__('AI Sports Writer', self::PLUGIN_DOMAIN); ?></h1>
+<div class="wrap">
+    <h1><?php echo esc_html__('AI Sports Writer', self::PLUGIN_DOMAIN); ?></h1>
 
-            <form method="post" action="options.php">
-                <?php
+    <form method="post" action="options.php">
+        <?php
                 wp_nonce_field('ai_sports_writer_regions', 'regions_nonce');
                 settings_fields('ai_sports_writer_api_settings');
                 do_settings_sections(self::MENU_SLUG);
                 submit_button(__('Save Settings', self::PLUGIN_DOMAIN), 'primary', 'save-settings');
                 ?>
-            </form>
+    </form>
 
-            <h2><?php echo esc_html__('Region Selection', self::PLUGIN_DOMAIN); ?></h2>
+    <h2><?php echo esc_html__('Region Selection', self::PLUGIN_DOMAIN); ?></h2>
 
-            <select id="region-selection" name="selected_regions[]" multiple="multiple" style="width: 100%;">
+    <select id="region-selection" name="selected_regions[]" multiple="multiple" style="width: 100%;">
 
-            </select>
+    </select>
 
-            <button id="save-regions" class="button-primary">
-                <?php echo esc_html__('Save Regions', self::PLUGIN_DOMAIN); ?>
-            </button>
-        </div>
+    <button id="save-regions" class="button-primary">
+        <?php echo esc_html__('Save Regions', self::PLUGIN_DOMAIN); ?>
+    </button>
+</div>
 
-    <?php
+<?php
     }
 
     /**
@@ -275,17 +275,17 @@ class Plugin
     public function post_settings_page(): void
     {
     ?>
-        <div class="wrap">
-            <h1><?php echo esc_html__('Post Configuration', self::PLUGIN_DOMAIN); ?></h1>
-            <form method="post" action="options.php">
-                <?php
+<div class="wrap">
+    <h1><?php echo esc_html__('Post Configuration', self::PLUGIN_DOMAIN); ?></h1>
+    <form method="post" action="options.php">
+        <?php
                 settings_fields('ai_sports_writer_post_settings');
                 do_settings_sections(self::POST_SETTINGS_SLUG);
                 submit_button();
                 ?>
-            </form>
-        </div>
-    <?php
+    </form>
+</div>
+<?php
     }
 
     /**
@@ -294,16 +294,16 @@ class Plugin
     public function post_settings_cron(): void
     {
     ?>
-        <div class="wrap">
+<div class="wrap">
 
-            <form method="post" action="options.php">
-                <?php
+    <form method="post" action="options.php">
+        <?php
                 settings_fields('ai_sports_writer_settings');
                 do_settings_sections(self::CRON_SETTINGS_SLUG);
 
                 ?>
-            </form>
-        </div>
+    </form>
+</div>
 <?php
     }
 
@@ -366,7 +366,7 @@ class Plugin
     }
 
     /**
-     * Simple logging method
+     * Logging method
      *
      * @param string $message Log message
      * @param string $level Log level
