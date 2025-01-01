@@ -84,23 +84,29 @@ class ContentGenerator
     {
         global $wpdb;
         $table_name = $wpdb->prefix . 'football_games';
-        $two_days_ago = date('Y-m-d H:i:s', strtotime('-2 days'));
+        $two_days_ago = gmdate('Y-m-d H:i:s', strtotime('-2 days'));
 
-        // Delete old games
-        $wpdb->query($wpdb->prepare("DELETE FROM $table_name WHERE match_datetime < %s", $two_days_ago));
-
+        //deleting old games
+        $where = [
+            'match_datetime' => $two_days_ago
+        ];
+        $deleted_count = $wpdb->delete($table_name, $where, ['%s']);
 
         $inserted_count = 0;
         foreach ($games['data'] as $game) {
-
+            // Check for existing match
             $existing_match = $wpdb->get_var(
-                $wpdb->prepare("SELECT COUNT(*) FROM $table_name WHERE match_code = %s", $game['match_code'])
+                $wpdb->prepare(
+                    "SELECT COUNT(*) FROM {$table_name} WHERE match_code = %s",
+                    $game['match_code']
+                )
             );
+
             if ($existing_match > 0) {
                 continue;
             }
 
-
+            // Prepare data for insertion
             $data = [
                 'match_code'    => $game['match_code'] ?? null,
                 'region'        => $game['region'] ?? '',
@@ -110,10 +116,13 @@ class ContentGenerator
                 'match_datetime' => $game['match_datetime'] ?? null,
                 'time_zone'     => $game['time_zone'] ?? '',
                 'provider'      => $game['provider'] ?? '',
-                'odds'          => json_encode($game['odds'] ?? []),
+                'odds'          => wp_json_encode($game['odds'] ?? []),
             ];
+
+            // Formats for each field to ensure proper sanitization
             $formats = ['%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'];
 
+            // Insert the game data
             $result = $wpdb->insert($table_name, $data, $formats);
             if ($result) {
                 $inserted_count++;
@@ -122,6 +131,8 @@ class ContentGenerator
 
         Logger::log("Games processed: " . count($games['data']) . ", inserted: $inserted_count");
     }
+
+
 
 
 
@@ -147,12 +158,12 @@ class ContentGenerator
 
         global $wpdb;
         $table_name = $wpdb->prefix . 'football_games';
-        $today = date('Y-m-d');
+        $today = gmdate('Y-m-d');
 
 
         $games_processed_today = $wpdb->get_var(
             $wpdb->prepare(
-                "SELECT COUNT(*) FROM $table_name WHERE processed = 1 AND DATE(processed_started_at) = %s",
+                "SELECT COUNT(*) FROM `{$wpdb->prefix}football_games` WHERE processed = 1 AND DATE(processed_started_at) = %s",
                 $today
             )
         );
@@ -167,7 +178,7 @@ class ContentGenerator
         $current_time = current_time('mysql');
         $games = $wpdb->get_results(
             $wpdb->prepare(
-                "SELECT * FROM $table_name WHERE processed = 0 AND match_datetime > %s LIMIT %d",
+                "SELECT * FROM {$wpdb->prefix}football_games WHERE processed = 0 AND match_datetime > %s LIMIT %d",
                 $current_time,
                 $max_games_per_hour
             ),
@@ -207,7 +218,7 @@ class ContentGenerator
                 $prompt = $this->prepare_content_prompt($game, $all_stats, $ai_content_prompt);
                 $ai_content = $this->openai_service->generateContent($openai_api_key, $prompt);
 
-                $post_time = date('Y-m-d H:i:s', strtotime("+1 hour +" . ($index * $post_interval) . " minutes"));
+                $post_time = gmdate('Y-m-d H:i:s', strtotime("+1 hour +" . ($index * $post_interval) . " minutes"));
 
                 if ($ai_content) {
                     $this->schedule_content_post($ai_content, $post_time, $game);
@@ -415,11 +426,30 @@ class ContentGenerator
 
             // Upload and set featured image if URL is available
             if ($featured_image_url) {
-                $upload_dir = wp_upload_dir();
-                $image_data = @file_get_contents($featured_image_url);
+                global $wp_filesystem;
 
-                if ($image_data === false) {
-                    Logger::log("Failed to fetch image from URL: {$featured_image_url}", 'ERROR');
+                // Initialize WP_Filesystem
+                if (!function_exists('WP_Filesystem')) {
+                    require_once(ABSPATH . 'wp-admin/includes/file.php');
+                }
+
+                if (!WP_Filesystem()) {
+                    Logger::log("WP_Filesystem could not be initialized.", 'ERROR');
+                    return;
+                }
+
+                $upload_dir = wp_upload_dir();
+
+                // Fetch image data using wp_remote_get
+                $response = wp_remote_get($featured_image_url);
+                if (is_wp_error($response)) {
+                    Logger::log("Failed to fetch image from URL: {$featured_image_url}. Error: " . $response->get_error_message(), 'ERROR');
+                    return;
+                }
+
+                $image_data = wp_remote_retrieve_body($response);
+                if (empty($image_data)) {
+                    Logger::log("Image data is empty for URL: {$featured_image_url}", 'ERROR');
                     return;
                 }
 
@@ -428,10 +458,16 @@ class ContentGenerator
                 if (empty($fileExtension)) {
                     $fileExtension = 'png';
                 }
-                $filename = md5(uniqid(mt_rand(), true)) . '.' . $fileExtension;
 
-                $file = $upload_dir['path'] . '/' . $filename;
-                file_put_contents($file, $image_data);
+                $filename = md5(uniqid(wp_rand(), true)) . '.' . $fileExtension;
+
+                $file = trailingslashit($upload_dir['path']) . $filename;
+
+                // Use WP_Filesystem to write the image data to a file
+                if (!$wp_filesystem->put_contents($file, $image_data, FS_CHMOD_FILE)) {
+                    Logger::log("Failed to save image to {$file} using WP_Filesystem.", 'ERROR');
+                    return;
+                }
 
                 $wp_filetype = wp_check_filetype($filename, null);
                 $attachment = [
@@ -447,7 +483,7 @@ class ContentGenerator
                 set_post_thumbnail($post_id, $attach_id);
 
                 // Log the image upload success
-                // Logger::log("Featured image set successfully for post ID {$post_id}", 'INFO');
+                Logger::log("Featured image set successfully for post ID {$post_id}", 'INFO');
             }
         }
 

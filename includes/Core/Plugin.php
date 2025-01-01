@@ -5,6 +5,9 @@ namespace AiSportsWriter\Core;
 use AiSportsWriter\Admin\PostConfigPage;
 use AiSportsWriter\Admin\CronSettingsPage;
 use AiSportsWriter\Admin\ApiConfigPage;
+use AiSportsWriter\Services\SportApiService;
+use AiSportsWriter\Services\OpenAiService;
+
 use Exception;
 use WP_Error;
 
@@ -85,6 +88,7 @@ class Plugin
             // Register activation and deactivation hooks
             register_activation_hook(AI_SPORTS_WRITER_PLUGIN_FILE, [self::$instance, 'activate']);
             register_deactivation_hook(AI_SPORTS_WRITER_PLUGIN_FILE, [self::$instance, 'deactivate']);
+            add_action('init', [self::class, 'initialize_content_generator']);
         }
         return self::$instance;
     }
@@ -106,12 +110,14 @@ class Plugin
             $this->log("Activation failed: {$e->getMessage()}", 'error');
 
             // Prevent plugin activation and show error
+
             wp_die(
                 sprintf(
-                    __('AI Sports Writer could not be activated. Error: %s', self::PLUGIN_DOMAIN),
-                    $e->getMessage()
+                    // Translators: %s is the error message from an exception during plugin activation
+                    esc_html__('AI Sports Writer could not be activated. Error: %s', 'ai-sports-writer'),
+                    esc_html($e->getMessage())
                 ),
-                __('Plugin Activation Error', self::PLUGIN_DOMAIN),
+                esc_html__('Plugin Activation Error', 'ai-sports-writer'),
                 ['response' => 500]
             );
         }
@@ -209,8 +215,8 @@ class Plugin
         }
 
         add_menu_page(
-            __('AI Sports Writer', self::PLUGIN_DOMAIN),
-            __('AI Sports Writer', self::PLUGIN_DOMAIN),
+            __('AI Sports Writer', 'ai-sports-writer'),
+            __('AI Sports Writer', 'ai-sports-writer'),
             'manage_options',
             self::MENU_SLUG,
             [$this, 'renderMainPage'],
@@ -220,8 +226,8 @@ class Plugin
 
         add_submenu_page(
             self::MENU_SLUG,
-            __('Post Settings', self::PLUGIN_DOMAIN),
-            __('Post Config', self::PLUGIN_DOMAIN),
+            __('Post Settings', 'ai-sports-writer'),
+            __('Post Config', 'ai-sports-writer'),
             'manage_options',
             self::POST_SETTINGS_SLUG,
             [$this, 'post_settings_page']
@@ -229,12 +235,20 @@ class Plugin
 
         add_submenu_page(
             self::MENU_SLUG,
-            __('Cron Settings', self::PLUGIN_DOMAIN),
-            __('Cron status', self::PLUGIN_DOMAIN),
+            __('Cron Settings', 'ai-sports-writer'),
+            __('Cron status', 'ai-sports-writer'),
             'manage_options',
             self::CRON_SETTINGS_SLUG,
             [$this, 'post_settings_cron']
         );
+    }
+
+    public static function initialize_content_generator()
+    {
+        $sport_api_service = new SportApiService();
+        $openai_service = new OpenAiService();
+
+        $content_generator = new ContentGenerator($sport_api_service, $openai_service);
     }
 
     /**
@@ -244,25 +258,25 @@ class Plugin
     {
 ?>
 <div class="wrap">
-    <h1><?php echo esc_html__('AI Sports Writer', self::PLUGIN_DOMAIN); ?></h1>
+    <h1><?php echo esc_html__('AI Sports Writer', 'ai-sports-writer'); ?></h1>
 
     <form method="post" action="options.php">
         <?php
                 wp_nonce_field('ai_sports_writer_regions', 'regions_nonce');
                 settings_fields('ai_sports_writer_api_settings');
                 do_settings_sections(self::MENU_SLUG);
-                submit_button(__('Save Settings', self::PLUGIN_DOMAIN), 'primary', 'save-settings');
+                submit_button(__('Save Settings', 'ai-sports-writer'), 'primary', 'save-settings');
                 ?>
     </form>
 
-    <h2><?php echo esc_html__('Region Selection', self::PLUGIN_DOMAIN); ?></h2>
+    <h2><?php echo esc_html__('Region Selection', 'ai-sports-writer'); ?></h2>
 
     <select id="region-selection" name="selected_regions[]" multiple="multiple" style="width: 100%;">
 
     </select>
 
     <button id="save-regions" class="button-primary">
-        <?php echo esc_html__('Save Regions', self::PLUGIN_DOMAIN); ?>
+        <?php echo esc_html__('Save Regions', 'ai-sports-writer'); ?>
     </button>
 </div>
 
@@ -276,7 +290,7 @@ class Plugin
     {
     ?>
 <div class="wrap">
-    <h1><?php echo esc_html__('Post Configuration', self::PLUGIN_DOMAIN); ?></h1>
+    <h1><?php echo esc_html__('Post Configuration', 'ai-sports-writer'); ?></h1>
     <form method="post" action="options.php">
         <?php
                 settings_fields('ai_sports_writer_post_settings');
@@ -293,6 +307,8 @@ class Plugin
      */
     public function post_settings_cron(): void
     {
+        $cronSettingsPage = new CronSettingsPage();
+        $cronSettingsPage->renderPage();
     ?>
 <div class="wrap">
 
@@ -358,7 +374,11 @@ class Plugin
             $result = dbDelta($sql);
 
             if ($result === false) {
-                throw new Exception("Failed to create table: {$table_name}");
+                throw new Exception(sprintf(
+                    /* translators: %s: table name */
+                    esc_html__('Failed to create table: %s', 'ai-sports-writer'),
+                    esc_html($table_name)
+                ));
             }
         }
 
@@ -384,7 +404,6 @@ class Plugin
             $message
         );
 
-        error_log($log_message);
     }
 
     /**

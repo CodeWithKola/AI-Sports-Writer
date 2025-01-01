@@ -214,7 +214,7 @@ class OpenAiService
         }
 
         // Log if no image URL found
-        Logger::log('No image URL found in DALL-E response: ' . print_r($response_data, true));
+        Logger::log('No image URL found in DALL-E response');
         return null;
     }
 }

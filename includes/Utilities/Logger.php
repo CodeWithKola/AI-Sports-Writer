@@ -25,11 +25,15 @@ class Logger
 
         $timestamp = current_time('mysql');
         $log_entry = sprintf('[%s] %s: %s', $timestamp, $level, $message);
-        error_log($log_entry);
 
-        // Only echo if WP_DEBUG_DISPLAY is true
-        if (defined('WP_DEBUG_DISPLAY') && WP_DEBUG_DISPLAY) {
+        // Only echo if WP_DEBUG_DISPLAY is true, not an AJAX request, and not running from CLI
+        if (defined('WP_DEBUG_DISPLAY') && WP_DEBUG_DISPLAY && !self::is_ajax_or_cli_request()) {
             echo esc_html($log_entry) . '<br>';
         }
+    }
+
+    private static function is_ajax_or_cli_request(): bool
+    {
+        return (function_exists('wp_doing_ajax') && wp_doing_ajax()) || php_sapi_name() === 'cli';
     }
 }

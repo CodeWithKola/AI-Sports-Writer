@@ -7,9 +7,6 @@ use WP_Error;
 
 class ApiConfigPage
 {
-    private const TEXT_DOMAIN = 'ai-sports-writer';
-    private const OPTION_NAME = 'ai_sports_writer_api_settings';
-    private const PAGE_SLUG = 'ai-sports-writer-api-config';
 
     /**
      * Allowed OpenAI models
@@ -39,8 +36,8 @@ class ApiConfigPage
     public function register_settings(): void
     {
         register_setting(
-            self::OPTION_NAME,
-            self::OPTION_NAME,
+            'ai_sports_writer_api_settings',
+            'ai_sports_writer_api_settings',
             [
                 'sanitize_callback' => [$this, 'sanitize_settings'],
                 'default' => [
@@ -55,7 +52,7 @@ class ApiConfigPage
         // API Configuration Section
         add_settings_section(
             'api_settings',
-            __('API Configuration', self::TEXT_DOMAIN),
+            __('API Configuration', 'ai-sports-writer'),
             [$this, 'api_settings_section_callback'],
             'ai-sports-writer'
         );
@@ -70,9 +67,9 @@ class ApiConfigPage
     private function register_api_fields(): void
     {
         $fields = [
-            'sport_api_key' => __('Sport API Key', self::TEXT_DOMAIN),
-            'openai_api_key' => __('OpenAI API Key', self::TEXT_DOMAIN),
-            'openai_model' => __('OpenAI Model', self::TEXT_DOMAIN),
+            'sport_api_key' => __('Sport API Key', 'ai-sports-writer'),
+            'openai_api_key' => __('OpenAI API Key', 'ai-sports-writer'),
+            'openai_model' => __('OpenAI Model', 'ai-sports-writer'),
         ];
 
         foreach ($fields as $field_id => $field_label) {
@@ -91,7 +88,7 @@ class ApiConfigPage
      */
     public function api_settings_section_callback(): void
     {
-        echo '<p>' . esc_html__('Configure your API settings here. Enter the required keys and test API connectivity.', self::TEXT_DOMAIN) . '</p>';
+        echo '<p>' . esc_html__('Configure your API settings here. Enter the required keys and test API connectivity.', 'ai-sports-writer') . '</p>';
     }
 
     /**
@@ -99,15 +96,15 @@ class ApiConfigPage
      */
     public function sport_api_key_callback(): void
     {
-        $options = get_option(self::OPTION_NAME);
+        $options = get_option('ai_sports_writer_api_settings');
         $sport_api_key = $options['sport_api_key'] ?? '';
 
         printf(
             '<input type="text" name="%s[sport_api_key]" value="%s" class="regular-text" />
             <button id="test-sport-api" class="button-primary">%s</button>',
-            esc_attr(self::OPTION_NAME),
+            esc_attr('ai_sports_writer_api_settings'),
             esc_attr($sport_api_key),
-            esc_html__('Test API', self::TEXT_DOMAIN)
+            esc_html__('Test API', 'ai-sports-writer')
         );
     }
 
@@ -116,12 +113,12 @@ class ApiConfigPage
      */
     public function openai_api_key_callback(): void
     {
-        $options = get_option(self::OPTION_NAME);
+        $options = get_option('ai_sports_writer_api_settings');
         $openai_api_key = $options['openai_api_key'] ?? '';
 
         printf(
             '<input type="text" name="%s[openai_api_key]" value="%s" class="regular-text" />',
-            esc_attr(self::OPTION_NAME),
+            esc_attr('ai_sports_writer_api_settings'),
             esc_attr($openai_api_key)
         );
     }
@@ -131,7 +128,7 @@ class ApiConfigPage
      */
     public function openai_model_callback(): void
     {
-        $options = get_option(self::OPTION_NAME);
+        $options = get_option('ai_sports_writer_api_settings');
         $current_model = $options['openai_model'] ?? 'gpt-3.5-turbo';
 
         $model_options = array_map(function ($model_key, $model_name) use ($current_model) {
@@ -142,13 +139,13 @@ class ApiConfigPage
                 esc_html($model_name)
             );
         }, array_keys(self::ALLOWED_MODELS), self::ALLOWED_MODELS);
-
+        $model_options = implode('', $model_options);
         printf(
             '<select name="%s[openai_model]">%s</select>
             <p class="description">%s</p>',
-            esc_attr(self::OPTION_NAME),
-            implode('', $model_options),
-            esc_html__('Select the OpenAI model to use for content generation.', self::TEXT_DOMAIN)
+            esc_attr('ai_sports_writer_api_settings'),
+            $model_options,
+            esc_html__('Select the OpenAI model to use for content generation.', 'ai-sports-writer')
         );
     }
 
@@ -161,12 +158,12 @@ class ApiConfigPage
         check_ajax_referer('fcg_nonce', 'nonce');
 
         // Get the API key from options
-        $options = get_option(self::OPTION_NAME);
+        $options = get_option('ai_sports_writer_api_settings');
         $api_key = $options['sport_api_key'] ?? '';
 
         // Check if the API key is provided
         if (empty($api_key)) {
-            wp_send_json_error(['message' => __('API Key is missing', self::TEXT_DOMAIN)]);
+            wp_send_json_error(['message' => __('API Key is missing', 'ai-sports-writer')]);
             return;
         }
 
@@ -181,12 +178,13 @@ class ApiConfigPage
             $this->insert_regions_into_db($regions);
 
             // Send success response
-            wp_send_json_success(['message' => __('API Connection Successful', self::TEXT_DOMAIN)]);
+            wp_send_json_success(['message' => __('API Connection Successful', 'ai-sports-writer')]);
         } catch (\Exception $e) {
             // Log the error and send failure response
             Logger::log('Sport API Test Error: ' . $e->getMessage(), 'ERROR');
             wp_send_json_error(['message' => sprintf(
-                __('Request failed: %s', self::TEXT_DOMAIN),
+                // translators: %s is the error message returned from the exception
+                __('Request failed: %s', 'ai-sports-writer'),
                 $e->getMessage()
             )]);
         }
@@ -201,7 +199,7 @@ class ApiConfigPage
     {
         global $wpdb;
         $regions = $regions['data'] ?? [];
-        $table_name = $wpdb->prefix . 'football_regions';
+        $table_name = esc_sql($wpdb->prefix . 'football_regions');
 
         // Prepare and insert regions
         foreach ($regions as $region) {
@@ -232,6 +230,8 @@ class ApiConfigPage
         }
     }
 
+
+
     /**
      * Fetch regions via Ajax
      */
@@ -241,21 +241,24 @@ class ApiConfigPage
         check_ajax_referer('fcg_nonce', 'nonce');
 
         global $wpdb;
-        $content_regions_table = $wpdb->prefix . 'content_regions';
-        $regions_table = $wpdb->prefix . 'football_regions';
+
+        $content_regions_table = esc_sql($wpdb->prefix . 'content_regions');
+        $regions_table = esc_sql($wpdb->prefix . 'football_regions');
 
         // Fetch regions with selection status
         $regions = $wpdb->get_results(
-            $wpdb->prepare(
-                "SELECT r.*, 
-                (SELECT COUNT(*) FROM {$content_regions_table} cr WHERE cr.region_id = r.id) > 0 as selected 
-                FROM {$regions_table} r"
-            ),
+            "
+            SELECT r.*, 
+            (SELECT COUNT(*) FROM {$content_regions_table} cr WHERE cr.region_id = r.id) > 0 as selected 
+            FROM {$regions_table} r
+            ",
             ARRAY_A
         );
 
         wp_send_json_success($regions);
     }
+
+
 
     /**
      * Save content regions via Ajax
@@ -266,7 +269,9 @@ class ApiConfigPage
         check_ajax_referer('fcg_nonce', 'nonce');
 
         global $wpdb;
-        $content_regions_table = $wpdb->prefix . 'content_regions';
+
+        // Sanitize the table name
+        $content_regions_table = esc_sql($wpdb->prefix . 'content_regions');
 
         // Sanitize and validate selected regions
         $selected_regions = isset($_POST['selected_regions'])
@@ -274,13 +279,14 @@ class ApiConfigPage
             : [];
 
         if (empty($selected_regions)) {
-            wp_send_json_error(['message' => __('No regions selected.', self::TEXT_DOMAIN)]);
+            wp_send_json_error(['message' => __('No regions selected.', 'ai-sports-writer')]);
             return;
         }
 
-        // Clear existing selections and insert new ones
+        // Clear existing selections
         $wpdb->query("TRUNCATE TABLE {$content_regions_table}");
 
+        // Insert new selections
         foreach ($selected_regions as $region_id) {
             $wpdb->insert(
                 $content_regions_table,
@@ -289,8 +295,9 @@ class ApiConfigPage
             );
         }
 
-        wp_send_json_success(['message' => __('Regions saved successfully.', self::TEXT_DOMAIN)]);
+        wp_send_json_success(['message' => __('Regions saved successfully.', 'ai-sports-writer')]);
     }
+
 
     /**
      * Sanitize and validate settings
@@ -312,9 +319,9 @@ class ApiConfigPage
         } else {
             $sanitized['openai_model'] = 'gpt-3.5-turbo';
             add_settings_error(
-                self::OPTION_NAME,
+                'ai_sports_writer_api_settings',
                 'invalid_openai_model',
-                __('Invalid OpenAI model selected. Defaulting to GPT-3.5 Turbo.', self::TEXT_DOMAIN)
+                __('Invalid OpenAI model selected. Defaulting to GPT-3.5 Turbo.', 'ai-sports-writer')
             );
         }
 
