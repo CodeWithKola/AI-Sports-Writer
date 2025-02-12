@@ -1,6 +1,6 @@
 <?php
 
-namespace AiSportsWriter\Admin;
+namespace AiSprtsW\Admin;
 
 /**
  * Class CronSettingsPage
@@ -58,8 +58,8 @@ class CronSettingsPage
     private function getCronHooks(): array
     {
         return [
-            'ai_sports_writer_cron' => ['interval' => 60 * 60, 'offset' => 10],
-            'ai_sports_writer_fetch_cron' => ['interval' => 3 * 60 * 60, 'offset' => 0],
+            'aisprtsw_cron' => ['interval' => 60 * 60, 'offset' => 10],
+            'aisprtsw_fetch_cron' => ['interval' => 3 * 60 * 60, 'offset' => 0],
         ];
     }
 

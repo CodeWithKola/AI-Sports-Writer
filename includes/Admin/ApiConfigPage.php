@@ -1,8 +1,8 @@
 <?php
 
-namespace AiSportsWriter\Admin;
+namespace AiSprtsW\Admin;
 
-use AiSportsWriter\Utilities\Logger;
+use AiSprtsW\Utilities\Logger;
 use WP_Error;
 
 class ApiConfigPage
@@ -36,8 +36,8 @@ class ApiConfigPage
     public function register_settings(): void
     {
         register_setting(
-            'ai_sports_writer_api_settings',
-            'ai_sports_writer_api_settings',
+            'aisprtsw_api_settings',
+            'aisprtsw_api_settings',
             [
                 'sanitize_callback' => [$this, 'sanitize_settings'],
                 'default' => [
@@ -96,15 +96,15 @@ class ApiConfigPage
      */
     public function sport_api_key_callback(): void
     {
-        $options = get_option('ai_sports_writer_api_settings');
+        $options = get_option('aisprtsw_api_settings');
         $sport_api_key = $options['sport_api_key'] ?? '';
 
         printf(
             '<input type="text" name="%s[sport_api_key]" value="%s" class="regular-text" />
-            <button id="test-sport-api" class="button-primary">%s</button>',
-            esc_attr('ai_sports_writer_api_settings'),
+            <p class="description">%s</p>',
+            esc_attr('aisprtsw_api_settings'),
             esc_attr($sport_api_key),
-            esc_html__('Test API', 'ai-sports-writer')
+            esc_html__('Enter your API key from scalesp.com. You can get an API key by signing up or logging into your account on scalesp.com.', 'ai-sports-writer')
         );
     }
 
@@ -113,13 +113,15 @@ class ApiConfigPage
      */
     public function openai_api_key_callback(): void
     {
-        $options = get_option('ai_sports_writer_api_settings');
+        $options = get_option('aisprtsw_api_settings');
         $openai_api_key = $options['openai_api_key'] ?? '';
 
         printf(
-            '<input type="text" name="%s[openai_api_key]" value="%s" class="regular-text" />',
-            esc_attr('ai_sports_writer_api_settings'),
-            esc_attr($openai_api_key)
+            '<input type="text" name="%s[openai_api_key]" value="%s" class="regular-text" />
+            <p class="description">%s</p>',
+            esc_attr('aisprtsw_api_settings'),
+            esc_attr($openai_api_key),
+            esc_html__('Enter your OpenAI API key. You can obtain an API key by signing up or logging into your account on openai.com.', 'ai-sports-writer')
         );
     }
 
@@ -128,9 +130,10 @@ class ApiConfigPage
      */
     public function openai_model_callback(): void
     {
-        $options = get_option('ai_sports_writer_api_settings');
+        $options = get_option('aisprtsw_api_settings');
         $current_model = $options['openai_model'] ?? 'gpt-3.5-turbo';
 
+        // Build options array
         $model_options = array_map(function ($model_key, $model_name) use ($current_model) {
             return sprintf(
                 '<option value="%s" %s>%s</option>',
@@ -139,11 +142,21 @@ class ApiConfigPage
                 esc_html($model_name)
             );
         }, array_keys(self::ALLOWED_MODELS), self::ALLOWED_MODELS);
-        $model_options = implode('', $model_options);
+
+        $model_options = wp_kses(
+            implode('', $model_options),
+            [
+                'option' => [
+                    'value' => [],
+                    'selected' => []
+                ]
+            ]
+        );
+
         printf(
             '<select name="%s[openai_model]">%s</select>
             <p class="description">%s</p>',
-            esc_attr('ai_sports_writer_api_settings'),
+            esc_attr('aisprtsw_api_settings'),
             $model_options,
             esc_html__('Select the OpenAI model to use for content generation.', 'ai-sports-writer')
         );
@@ -158,7 +171,7 @@ class ApiConfigPage
         check_ajax_referer('fcg_nonce', 'nonce');
 
         // Get the API key from options
-        $options = get_option('ai_sports_writer_api_settings');
+        $options = get_option('aisprtsw_api_settings');
         $api_key = $options['sport_api_key'] ?? '';
 
         // Check if the API key is provided
@@ -169,7 +182,7 @@ class ApiConfigPage
 
         try {
             // Initialize the SportApiService
-            $sport_api_service = new \AiSportsWriter\Services\SportApiService();
+            $sport_api_service = new \AiSprtsW\Services\SportApiService();
 
             // Fetch regions
             $regions = $sport_api_service->fetchFootballRegions($api_key);
@@ -319,7 +332,7 @@ class ApiConfigPage
         } else {
             $sanitized['openai_model'] = 'gpt-3.5-turbo';
             add_settings_error(
-                'ai_sports_writer_api_settings',
+                'aisprtsw_api_settings',
                 'invalid_openai_model',
                 __('Invalid OpenAI model selected. Defaulting to GPT-3.5 Turbo.', 'ai-sports-writer')
             );

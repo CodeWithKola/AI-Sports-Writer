@@ -1,15 +1,15 @@
 <?php
 
-namespace AiSportsWriter\Core;
+namespace AiSprtsW\Core;
 
-use AiSportsWriter\Services\SportApiService;
-use AiSportsWriter\Services\OpenAiService;
-use AiSportsWriter\Utilities\Logger;
+use AiSprtsW\Services\SportApiService;
+use AiSprtsW\Services\OpenAiService;
+use AiSprtsW\Utilities\Logger;
 
 class ContentGenerator
 {
-    private const OPTION_POST_NAME = 'ai_sports_writer_post_settings';
-    private const OPTION_API_NAME = 'ai_sports_writer_api_settings';
+    private const OPTION_POST_NAME = 'aisprtsw_post_settings';
+    private const OPTION_API_NAME = 'aisprtsw_api_settings';
 
     private SportApiService $sport_api_service;
     private OpenAiService $openai_service;
@@ -29,15 +29,15 @@ class ContentGenerator
         add_filter('cron_schedules', [$this, 'register_custom_intervals']);
 
         // Schedule events if not already scheduled
-        if (!wp_next_scheduled('ai_sports_writer_fetch_cron')) {
-            wp_schedule_event(time(), 'every_three_hours', 'ai_sports_writer_fetch_cron');
+        if (!wp_next_scheduled('aisprtsw_fetch_cron')) {
+            wp_schedule_event(time(), 'every_three_hours', 'aisprtsw_fetch_cron');
         }
-        if (!wp_next_scheduled('ai_sports_writer_cron')) {
-            wp_schedule_event(time(), 'ten_minutes_before_hour', 'ai_sports_writer_cron');
+        if (!wp_next_scheduled('aisprtsw_cron')) {
+            wp_schedule_event(time(), 'ten_minutes_before_hour', 'aisprtsw_cron');
         }
 
-        add_action('ai_sports_writer_fetch_cron', array($this, 'run_upcoming_games'));
-        add_action('ai_sports_writer_cron', array($this, 'run_content_generation'));
+        add_action('aisprtsw_fetch_cron', array($this, 'run_upcoming_games'));
+        add_action('aisprtsw_cron', array($this, 'run_content_generation'));
     }
 
     /**
@@ -367,6 +367,7 @@ class ContentGenerator
      */
     private function schedule_content_post($content, $post_time, $game)
     {
+
         $api_options = get_option(self::OPTION_API_NAME);
         $post_options = get_option(self::OPTION_POST_NAME);
 
@@ -426,63 +427,47 @@ class ContentGenerator
 
             // Upload and set featured image if URL is available
             if ($featured_image_url) {
-                global $wp_filesystem;
+                require_once ABSPATH . 'wp-admin/includes/file.php';
+                require_once ABSPATH . 'wp-admin/includes/media.php';
+                require_once ABSPATH . 'wp-admin/includes/image.php';
 
-                // Initialize WP_Filesystem
-                if (!function_exists('WP_Filesystem')) {
-                    require_once(ABSPATH . 'wp-admin/includes/file.php');
-                }
+                // Download the image from the URL
+                $tmp_file = download_url($featured_image_url, 60);
 
-                if (!WP_Filesystem()) {
-                    Logger::log("WP_Filesystem could not be initialized.", 'ERROR');
+                if (is_wp_error($tmp_file)) {
+                    Logger::log("Failed to download image from URL: {$featured_image_url}. Error: " . $tmp_file->get_error_message(), 'ERROR');
                     return;
                 }
 
-                $upload_dir = wp_upload_dir();
+                // Get the mime type of the downloaded file
+                $file_type = wp_check_filetype($tmp_file, null);
 
-                // Fetch image data using wp_remote_get
-                $response = wp_remote_get($featured_image_url);
-                if (is_wp_error($response)) {
-                    Logger::log("Failed to fetch image from URL: {$featured_image_url}. Error: " . $response->get_error_message(), 'ERROR');
-                    return;
-                }
+                // Note: DALL-E responses currently don't include file extensions in their metadata,
+                // so we manually append .png as fallback if no extension is provided
+                // Generate random filename with the correct extension
+                $random_filename = 'image-' . uniqid() . (empty($file_type['ext']) ? '.png' : '.' . $file_type['ext']);
 
-                $image_data = wp_remote_retrieve_body($response);
-                if (empty($image_data)) {
-                    Logger::log("Image data is empty for URL: {$featured_image_url}", 'ERROR');
-                    return;
-                }
 
-                $filename = basename($featured_image_url);
-                $fileExtension = pathinfo($filename, PATHINFO_EXTENSION);
-                if (empty($fileExtension)) {
-                    $fileExtension = 'png';
-                }
-
-                $filename = md5(uniqid(wp_rand(), true)) . '.' . $fileExtension;
-
-                $file = trailingslashit($upload_dir['path']) . $filename;
-
-                // Use WP_Filesystem to write the image data to a file
-                if (!$wp_filesystem->put_contents($file, $image_data, FS_CHMOD_FILE)) {
-                    Logger::log("Failed to save image to {$file} using WP_Filesystem.", 'ERROR');
-                    return;
-                }
-
-                $wp_filetype = wp_check_filetype($filename, null);
-                $attachment = [
-                    'post_mime_type' => $wp_filetype['type'],
-                    'post_title' => sanitize_file_name($filename),
-                    'post_content' => '',
-                    'post_status' => 'inherit'
+                // Prepare the file array for media_handle_sideload
+                $file = [
+                    'name'     => $random_filename,
+                    'tmp_name' => $tmp_file,
                 ];
-                $attach_id = wp_insert_attachment($attachment, $file, $post_id);
-                require_once(ABSPATH . 'wp-admin/includes/image.php');
-                $attach_data = wp_generate_attachment_metadata($attach_id, $file);
-                wp_update_attachment_metadata($attach_id, $attach_data);
-                set_post_thumbnail($post_id, $attach_id);
 
-                // Log the image upload success
+                // Use media_handle_sideload to upload the file
+                $attachment_id = media_handle_sideload($file, $post_id);
+
+                // Check for upload errors
+                if (is_wp_error($attachment_id)) {
+                    wp_delete_file($tmp_file); // Remove the temporary file
+                    Logger::log("Failed to upload and sideload image. Error: " . $attachment_id->get_error_message(), 'ERROR');
+                    return;
+                }
+
+                // Set the uploaded image as the featured image
+                set_post_thumbnail($post_id, $attachment_id);
+
+                // Log the successful image upload
                 Logger::log("Featured image set successfully for post ID {$post_id}", 'INFO');
             }
         }

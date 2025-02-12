@@ -1,18 +1,18 @@
 <?php
 
-namespace AiSportsWriter;
+namespace AiSprtsW;
 
 class Autoloader
 {
     /**
-     * Registers the autoloader function for the AiSportsWriter namespace.
+     * Registers the autoloader function for the AiSprtsW namespace.
      *
      * This method sets up an autoloader that automatically includes the appropriate
-     * PHP files for classes within the AiSportsWriter namespace. It uses the SPL
+     * PHP files for classes within the AiSprtsW namespace. It uses the SPL
      * autoload register function to add a custom autoloader.
      *
      * The autoloader function performs the following steps:
-     * 1. Checks if the class belongs to the AiSportsWriter namespace.
+     * 1. Checks if the class belongs to the AiSprtsW namespace.
      * 2. If it does, it calculates the file path based on the class name.
      * 3. If the file exists, it includes the file.
      *
@@ -21,7 +21,7 @@ class Autoloader
     public static function register()
     {
         spl_autoload_register(function ($class) {
-            $prefix = 'AiSportsWriter\\';
+            $prefix = 'AiSprtsW\\';
             $base_dir = __DIR__ . '/';
 
             $len = strlen($prefix);

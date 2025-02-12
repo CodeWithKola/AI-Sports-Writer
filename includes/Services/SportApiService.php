@@ -1,12 +1,12 @@
 <?php
 
-namespace AiSportsWriter\Services;
+namespace AiSprtsW\Services;
 
-use AiSportsWriter\Utilities\Logger;
+use AiSprtsW\Utilities\Logger;
 
 class SportApiService
 {
-    private const API_BASE_URL = 'https://app.scalesp.com/api/v1/football';
+    private const API_BASE_URL = 'https://api.scalesp.com/api/v1/football';
 
     /**
      * Fetches football regions from the API.
@@ -16,7 +16,8 @@ class SportApiService
      */
     public function fetchFootballRegions(string $apiKey): array
     {
-        return $this->makeApiRequest('/regions', $apiKey);
+        $regions    =   $this->makeApiRequest('/regions', $apiKey);
+        return $regions !== null ? $regions : [];
     }
 
 

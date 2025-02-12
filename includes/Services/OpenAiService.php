@@ -1,8 +1,8 @@
 <?php
 
-namespace AiSportsWriter\Services;
+namespace AiSprtsW\Services;
 
-use AiSportsWriter\Utilities\Logger;
+use AiSprtsW\Utilities\Logger;
 
 /**
  * Service class for interacting with OpenAI API.
@@ -10,7 +10,8 @@ use AiSportsWriter\Utilities\Logger;
 class OpenAiService
 {
     private const API_ENDPOINT = 'https://api.openai.com/v1/chat/completions';
-    private const OPTION_API_NAME = 'ai_sports_writer_api_settings';
+    private const OPTION_API_NAME = 'aisprtsw_api_settings';
+
 
 
     /**
@@ -156,24 +157,26 @@ class OpenAiService
         }
 
         // Create image prompt
-        $image_prompt = isset($game['home']) && isset($game['away'])
-            ? "A dynamic football stadium scene with {$game['home']} and {$game['away']} jerseys, vibrant sports photography style"
-            : "A football match preview poster with stadium and players";
-
-        Logger::log('DALL-E Prompt: ' . $image_prompt, 'ERROR');
+        $imagePrompt = isset($game['home'], $game['away'])
+            ? sprintf(
+                'A dynamic football stadium scene with %s and %s jerseys, vibrant sports photography style',
+                addslashes(sanitize_text_field($game['home'])),
+                addslashes(sanitize_text_field($game['away']))
+            )
+            : 'A football match preview poster with stadium and players';
 
         $url = 'https://api.openai.com/v1/images/generations';
 
         $args = [
             'method'  => 'POST',
-            'timeout' => 60,
+            'timeout' => 30,
             'headers' => [
                 'Authorization' => 'Bearer ' . $openai_api_key,
                 'Content-Type'  => 'application/json',
             ],
             'body'    => wp_json_encode([
                 'model' => 'dall-e-3',
-                'prompt' => $image_prompt,
+                'prompt' => $imagePrompt,
                 'n' => 1,
                 'size' => '1024x1024'
             ])

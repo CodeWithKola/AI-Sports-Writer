@@ -1,13 +1,13 @@
 <?php
 
-namespace AiSportsWriter\Utilities;
+namespace AiSprtsW\Utilities;
 
 /**
  * Class Logger
  *
  * Handles logging for the AI Sports Writer plugin.
  *
- * @package AiSportsWriter\Utilities
+ * @package AiSprtsW\Utilities
  */
 class Logger
 {
@@ -25,7 +25,6 @@ class Logger
 
         $timestamp = current_time('mysql');
         $log_entry = sprintf('[%s] %s: %s', $timestamp, $level, $message);
-
         // Only echo if WP_DEBUG_DISPLAY is true, not an AJAX request, and not running from CLI
         if (defined('WP_DEBUG_DISPLAY') && WP_DEBUG_DISPLAY && !self::is_ajax_or_cli_request()) {
             echo esc_html($log_entry) . '<br>';

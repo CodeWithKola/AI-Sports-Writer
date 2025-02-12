@@ -1,12 +1,12 @@
 <?php
 
-namespace AiSportsWriter\Core;
+namespace AiSprtsW\Core;
 
-use AiSportsWriter\Admin\PostConfigPage;
-use AiSportsWriter\Admin\CronSettingsPage;
-use AiSportsWriter\Admin\ApiConfigPage;
-use AiSportsWriter\Services\SportApiService;
-use AiSportsWriter\Services\OpenAiService;
+use AiSprtsW\Admin\PostConfigPage;
+use AiSprtsW\Admin\CronSettingsPage;
+use AiSprtsW\Admin\ApiConfigPage;
+use AiSprtsW\Services\SportApiService;
+use AiSprtsW\Services\OpenAiService;
 
 use Exception;
 use WP_Error;
@@ -58,21 +58,8 @@ class Plugin
      */
     private function __construct()
     {
-        $this->loadTextDomain();
         $this->initializePages();
         $this->setupHooks();
-    }
-
-    /**
-     * Load plugin text domain for internationalization
-     */
-    private function loadTextDomain(): void
-    {
-        load_plugin_textdomain(
-            self::PLUGIN_DOMAIN,
-            false,
-            dirname(plugin_basename(AI_SPORTS_WRITER_PLUGIN_FILE)) . '/languages'
-        );
     }
 
     /**
@@ -86,8 +73,8 @@ class Plugin
             self::$instance = new self();
 
             // Register activation and deactivation hooks
-            register_activation_hook(AI_SPORTS_WRITER_PLUGIN_FILE, [self::$instance, 'activate']);
-            register_deactivation_hook(AI_SPORTS_WRITER_PLUGIN_FILE, [self::$instance, 'deactivate']);
+            register_activation_hook(AISPRTSW_PLUGIN_FILE, [self::$instance, 'activate']);
+            register_deactivation_hook(AISPRTSW_PLUGIN_FILE, [self::$instance, 'deactivate']);
             add_action('init', [self::class, 'initialize_content_generator']);
         }
         return self::$instance;
@@ -135,8 +122,8 @@ class Plugin
         }
 
         // Clear scheduled cron jobs
-        wp_clear_scheduled_hook('ai_sports_writer_cron');
-        wp_clear_scheduled_hook('ai_sports_writer_fetch_cron');
+        wp_clear_scheduled_hook('aisprtsw_cron');
+        wp_clear_scheduled_hook('aisprtsw_fetch_cron');
 
         $this->log('Plugin deactivated');
     }
@@ -177,7 +164,7 @@ class Plugin
         wp_enqueue_media();
         wp_enqueue_script(
             'ai-sports-writer-js',
-            plugin_dir_url(AI_SPORTS_WRITER_PLUGIN_FILE) . 'assets/js/ai-sports-writer.js',
+            plugin_dir_url(AISPRTSW_PLUGIN_FILE) . 'assets/js/ai-sports-writer.js',
             ['jquery'],
             self::PLUGIN_VERSION,
             true
@@ -257,30 +244,21 @@ class Plugin
     public function renderMainPage(): void
     {
 ?>
-<div class="wrap">
-    <h1><?php echo esc_html__('AI Sports Writer', 'ai-sports-writer'); ?></h1>
+        <div class="wrap">
+            <h1><?php echo esc_html__('AI Sports Writer', 'ai-sports-writer'); ?></h1>
 
-    <form method="post" action="options.php">
-        <?php
-                wp_nonce_field('ai_sports_writer_regions', 'regions_nonce');
-                settings_fields('ai_sports_writer_api_settings');
+            <form method="post" action="options.php">
+                <?php
+                wp_nonce_field('aisprtsw_regions', 'regions_nonce');
+                settings_fields('aisprtsw_api_settings');
                 do_settings_sections(self::MENU_SLUG);
                 submit_button(__('Save Settings', 'ai-sports-writer'), 'primary', 'save-settings');
                 ?>
-    </form>
+            </form>
 
-    <h2><?php echo esc_html__('Region Selection', 'ai-sports-writer'); ?></h2>
+        </div>
 
-    <select id="region-selection" name="selected_regions[]" multiple="multiple" style="width: 100%;">
-
-    </select>
-
-    <button id="save-regions" class="button-primary">
-        <?php echo esc_html__('Save Regions', 'ai-sports-writer'); ?>
-    </button>
-</div>
-
-<?php
+    <?php
     }
 
     /**
@@ -289,17 +267,17 @@ class Plugin
     public function post_settings_page(): void
     {
     ?>
-<div class="wrap">
-    <h1><?php echo esc_html__('Post Configuration', 'ai-sports-writer'); ?></h1>
-    <form method="post" action="options.php">
-        <?php
-                settings_fields('ai_sports_writer_post_settings');
+        <div class="wrap">
+            <h1><?php echo esc_html__('Post Configuration', 'ai-sports-writer'); ?></h1>
+            <form method="post" action="options.php">
+                <?php
+                settings_fields('aisprtsw_post_settings');
                 do_settings_sections(self::POST_SETTINGS_SLUG);
                 submit_button();
                 ?>
-    </form>
-</div>
-<?php
+            </form>
+        </div>
+    <?php
     }
 
     /**
@@ -310,16 +288,16 @@ class Plugin
         $cronSettingsPage = new CronSettingsPage();
         $cronSettingsPage->renderPage();
     ?>
-<div class="wrap">
+        <div class="wrap">
 
-    <form method="post" action="options.php">
-        <?php
-                settings_fields('ai_sports_writer_settings');
+            <form method="post" action="options.php">
+                <?php
+                settings_fields('aisprtsw_settings');
                 do_settings_sections(self::CRON_SETTINGS_SLUG);
 
                 ?>
-    </form>
-</div>
+            </form>
+        </div>
 <?php
     }
 
@@ -382,7 +360,7 @@ class Plugin
             }
         }
 
-        update_option('sport_ai_writer_db_version', self::PLUGIN_VERSION);
+        update_option('aisprtsw_db_version', self::PLUGIN_VERSION);
     }
 
     /**
@@ -403,7 +381,6 @@ class Plugin
             strtoupper($level),
             $message
         );
-
     }
 
     /**
