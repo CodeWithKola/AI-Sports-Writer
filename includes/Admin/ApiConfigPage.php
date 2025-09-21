@@ -13,10 +13,11 @@ class ApiConfigPage
      */
     private const ALLOWED_MODELS = [
         'gpt-3.5-turbo' => 'GPT-3.5 Turbo',
-        'gpt-3.5-turbo-16k' => 'GPT-3.5 Turbo 16K',
-        'gpt-4' => 'GPT-4',
+        'gpt-4o-mini' => 'GPT-4o Mini',
         'gpt-4-turbo' => 'GPT-4 Turbo',
-        'gpt-4o' => 'GPT-4o'
+        'gpt-4o' => 'GPT-4o',
+        'gpt-4o-2024-08-06' => 'GPT-4o (Latest)',
+        'o1-mini' => 'o1-mini (Reasoning)'
     ];
 
     /**
