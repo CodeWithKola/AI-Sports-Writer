@@ -156,16 +156,30 @@ class OpenAiService
             return null;
         }
 
-        // Create image prompt
+        // Get user settings for image generation
+        $post_options = get_option('aisprtsw_post_settings');
+        $image_size = $post_options['dalle_image_size'] ?? '1024x1024';
+        $image_quality = $post_options['dalle_image_quality'] ?? 'standard';
+
+        // Create image prompt based on size for better composition
         $imagePrompt = isset($game['home'], $game['away'])
-            ? sprintf(
-                'A dynamic football stadium scene with %s and %s jerseys, vibrant sports photography style',
-                addslashes(sanitize_text_field($game['home'])),
-                addslashes(sanitize_text_field($game['away']))
-            )
-            : 'A football match preview poster with stadium and players';
+            ? $this->createContextualPrompt($game, $image_size)
+            : $this->createFallbackPrompt($image_size);
 
         $url = 'https://api.openai.com/v1/images/generations';
+
+        // Build request body
+        $request_body = [
+            'model' => 'dall-e-3',
+            'prompt' => $imagePrompt,
+            'n' => 1,
+            'size' => $image_size
+        ];
+
+        // Add quality parameter if HD is selected
+        if ($image_quality === 'hd') {
+            $request_body['quality'] = 'hd';
+        }
 
         $args = [
             'method'  => 'POST',
@@ -174,12 +188,7 @@ class OpenAiService
                 'Authorization' => 'Bearer ' . $openai_api_key,
                 'Content-Type'  => 'application/json',
             ],
-            'body'    => wp_json_encode([
-                'model' => 'dall-e-3',
-                'prompt' => $imagePrompt,
-                'n' => 1,
-                'size' => '1024x1024'
-            ])
+            'body'    => wp_json_encode($request_body)
         ];
 
         $response = wp_remote_post($url, $args);
@@ -219,5 +228,63 @@ class OpenAiService
         // Log if no image URL found
         Logger::log('No image URL found in DALL-E response');
         return null;
+    }
+
+    /**
+     * Create contextual prompt based on game data and image size
+     *
+     * @param array $game Game data
+     * @param string $size Image size
+     * @return string Optimized prompt
+     */
+    private function createContextualPrompt($game, $size)
+    {
+        $home_team = addslashes(sanitize_text_field($game['home']));
+        $away_team = addslashes(sanitize_text_field($game['away']));
+
+        switch ($size) {
+            case '1792x1024': // Landscape - Stadium scenes
+                return sprintf(
+                    'Wide panoramic view of a football stadium during %s vs %s match, dynamic crowd atmosphere, team colors prominently displayed, professional sports photography style, vibrant lighting',
+                    $home_team,
+                    $away_team
+                );
+            
+            case '1024x1792': // Portrait - Social media
+                return sprintf(
+                    'Vertical composition football match poster for %s vs %s, bold team logos, dynamic player silhouettes, modern graphic design, social media optimized layout',
+                    $home_team,
+                    $away_team
+                );
+            
+            case '1024x1024': // Square - Classic format
+            default:
+                return sprintf(
+                    'Dynamic football stadium scene with %s and %s jerseys, vibrant sports photography style, balanced composition',
+                    $home_team,
+                    $away_team
+                );
+        }
+    }
+
+    /**
+     * Create fallback prompt when game data is not available
+     *
+     * @param string $size Image size
+     * @return string Fallback prompt
+     */
+    private function createFallbackPrompt($size)
+    {
+        switch ($size) {
+            case '1792x1024': // Landscape
+                return 'Wide panoramic football stadium view with dramatic lighting, crowd atmosphere, professional sports photography';
+            
+            case '1024x1792': // Portrait
+                return 'Vertical football match preview poster with dynamic design, modern sports graphics, social media format';
+            
+            case '1024x1024': // Square
+            default:
+                return 'Football match preview poster with stadium and players, balanced composition';
+        }
     }
 }

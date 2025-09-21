@@ -50,6 +50,8 @@ class PostConfigPage
                     - Create a sense of anticipation and excitement",
                     'featured_image_url' => '',
                     'dalle_image_generation' => 0,
+                    'dalle_image_size' => '1024x1024',
+                    'dalle_image_quality' => 'standard',
                     'openai_model' => 'gpt-3.5-turbo',
                 ],
             ]
@@ -142,6 +144,22 @@ class PostConfigPage
             'dalle_image_generation',
             'DALL-E Image Generation',
             [$this, 'render_dalle_image_generation_field'],
+            'ai-sports-writer-post',
+            'image_settings'
+        );
+
+        add_settings_field(
+            'dalle_image_size',
+            'DALL-E Image Size',
+            [$this, 'render_dalle_image_size_field'],
+            'ai-sports-writer-post',
+            'image_settings'
+        );
+
+        add_settings_field(
+            'dalle_image_quality',
+            'DALL-E Image Quality',
+            [$this, 'render_dalle_image_quality_field'],
             'ai-sports-writer-post',
             'image_settings'
         );
@@ -279,6 +297,57 @@ class PostConfigPage
         echo '<p class="description">When checked, the plugin will attempt to generate a featured image using DALL-E for each post.</p>';
     }
 
+    // Render dropdown for DALL-E image size
+    public function render_dalle_image_size_field(): void
+    {
+        $options = get_option('aisprtsw_post_settings');
+        $current_size = $options['dalle_image_size'] ?? '1024x1024';
+
+        $size_options = [
+            '1024x1024' => 'Square (1024x1024) - Classic format',
+            '1792x1024' => 'Landscape (1792x1024) - Stadium scenes',
+            '1024x1792' => 'Portrait (1024x1792) - Social media'
+        ];
+
+        echo '<select name="aisprtsw_post_settings[dalle_image_size]">';
+        foreach ($size_options as $value => $label) {
+            $selected = selected($current_size, $value, false);
+            printf(
+                '<option value="%s" %s>%s</option>',
+                esc_attr($value),
+                $selected,
+                esc_html($label)
+            );
+        }
+        echo '</select>';
+        echo '<p class="description">Choose the aspect ratio that best fits your content layout.</p>';
+    }
+
+    // Render dropdown for DALL-E image quality
+    public function render_dalle_image_quality_field(): void
+    {
+        $options = get_option('aisprtsw_post_settings');
+        $current_quality = $options['dalle_image_quality'] ?? 'standard';
+
+        $quality_options = [
+            'standard' => 'Standard - Faster generation, lower cost',
+            'hd' => 'HD - Higher detail, premium quality'
+        ];
+
+        echo '<select name="aisprtsw_post_settings[dalle_image_quality]">';
+        foreach ($quality_options as $value => $label) {
+            $selected = selected($current_quality, $value, false);
+            printf(
+                '<option value="%s" %s>%s</option>',
+                esc_attr($value),
+                $selected,
+                esc_html($label)
+            );
+        }
+        echo '</select>';
+        echo '<p class="description">HD quality provides more detailed images but costs more to generate.</p>';
+    }
+
 
     // Sanitize input settings before saving
     public function sanitize_settings($input): array
@@ -351,6 +420,19 @@ class PostConfigPage
         }
 
         $sanitized['dalle_image_generation'] = (int) ($input['dalle_image_generation'] ?? 0);
+        
+        // DALL-E image size validation
+        $allowed_sizes = ['1024x1024', '1792x1024', '1024x1792'];
+        $sanitized['dalle_image_size'] = in_array($input['dalle_image_size'] ?? '', $allowed_sizes, true)
+            ? $input['dalle_image_size']
+            : '1024x1024';
+            
+        // DALL-E image quality validation
+        $allowed_qualities = ['standard', 'hd'];
+        $sanitized['dalle_image_quality'] = in_array($input['dalle_image_quality'] ?? '', $allowed_qualities, true)
+            ? $input['dalle_image_quality']
+            : 'standard';
+        
         $sanitized['post_author'] = (int) ($input['post_author'] ?? get_current_user_id());
         $sanitized['post_category'] = (int) ($input['post_category'] ?? 0);
 
